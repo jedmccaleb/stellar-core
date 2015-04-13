@@ -8,6 +8,7 @@
 #include "util/Timer.h"
 #include "util/Fs.h"
 #include "lib/util/getopt.h"
+#include "main/fuzz.h"
 #include "main/test.h"
 #include "main/Config.h"
 #include "lib/http/HttpClient.h"
@@ -17,6 +18,7 @@
 #include "main/PersistentState.h"
 #include <sodium.h>
 #include "database/Database.h"
+#include "util/optional.h"
 
 _INITIALIZE_EASYLOGGINGPP
 
@@ -30,10 +32,12 @@ enum opttag
     OPT_VERSION = 0x100,
     OPT_HELP,
     OPT_TEST,
+    OPT_FUZZ,
     OPT_CONF,
     OPT_CMD,
     OPT_FORCESCP,
     OPT_GENSEED,
+    OPT_GENFUZZ,
     OPT_LOGLEVEL,
     OPT_METRIC,
     OPT_NEWDB,
@@ -44,13 +48,15 @@ static const struct option stellar_core_options[] = {
     {"version", no_argument, nullptr, OPT_VERSION},
     {"help", no_argument, nullptr, OPT_HELP},
     {"test", no_argument, nullptr, OPT_TEST},
+    {"fuzz", required_argument, nullptr, OPT_FUZZ},
     {"conf", required_argument, nullptr, OPT_CONF},
     {"c", required_argument, nullptr, OPT_CMD},
     {"genseed", no_argument, nullptr, OPT_GENSEED},
+    {"genfuzz", required_argument, nullptr, OPT_GENFUZZ},
     {"metric", required_argument, nullptr, OPT_METRIC},
     {"newdb", no_argument, nullptr, OPT_NEWDB},
     {"newhist", required_argument, nullptr, OPT_NEWHIST},
-    {"forcescp", no_argument, nullptr, OPT_FORCESCP},
+    {"forcescp", optional_argument, nullptr, OPT_FORCESCP},
     {"ll", required_argument, nullptr, OPT_LOGLEVEL},
     {nullptr, 0, nullptr, 0}};
 
@@ -63,11 +69,12 @@ usage(int err = 1)
           "      --help          To display this string\n"
           "      --version       To print version information\n"
           "      --test          To run self-tests\n"
-          "      --metric METRIC Report metric METRIC on exit.\n"
+          "      --fuzz FILE     To run a single fuzz input and exit\n"
+          "      --metric METRIC Report metric METRIC on exit\n"
           "      --newdb         Creates or restores the DB to the genesis "
           "ledger\n"
           "      --newhist ARCH  Initialize the named history archive ARCH\n"
-          "      --forcescp      Force SCP to start with the local ledger as "
+          "      --forcescp      When true, forces SCP to start with the local ledger as "
           "position, close next time stellar-core is run\n"
           "      --genseed       Generate and print a random node seed\n"
           "      --ll LEVEL      Set the log level. (redundant with --c ll but "
@@ -116,7 +123,7 @@ checkInitialized(Application::pointer app)
 }
 
 void
-setForceSCPFlag(Config& cfg)
+setForceSCPFlag(Config& cfg, bool isOn)
 {
     VirtualClock clock;
     Application::pointer app = Application::create(clock, cfg);
@@ -124,16 +131,26 @@ setForceSCPFlag(Config& cfg)
     if (checkInitialized(app))
     {
         app->getPersistentState().setState(
-            PersistentState::kForceSCPOnNextLaunch, "true");
-        LOG(INFO) << "* ";
-        LOG(INFO) << "* The `force scp` flag has been set in the db.";
-        LOG(INFO) << "* ";
-        LOG(INFO)
-            << "* The next launch will start scp from the account balances";
-        LOG(INFO)
-            << "* as they stand in the db now, without waiting to hear from";
-        LOG(INFO) << "* the network.";
-        LOG(INFO) << "* ";
+            PersistentState::kForceSCPOnNextLaunch, (isOn ? "true" : "false"));
+        if (isOn)
+        {
+            LOG(INFO) << "* ";
+            LOG(INFO) << "* The `force scp` flag has been set in the db.";
+            LOG(INFO) << "* ";
+            LOG(INFO)
+                << "* The next launch will start scp from the account balances";
+            LOG(INFO)
+                << "* as they stand in the db now, without waiting to hear from";
+            LOG(INFO) << "* the network.";
+            LOG(INFO) << "* ";
+        }
+        else
+        {
+            LOG(INFO) << "* ";
+            LOG(INFO) << "* The `force scp` flag has been cleared.";
+            LOG(INFO) << "* The next launch will start normally.";
+            LOG(INFO) << "* ";
+        }
     }
 }
 
@@ -221,7 +238,7 @@ main(int argc, char* const* argv)
     el::Level logLevel = el::Level::Info;
     std::vector<char*> rest;
 
-    bool forceSCP = false;
+    optional<bool> forceSCP = nullptr;
     bool newDB = false;
     std::vector<std::string> newHistories;
     std::vector<std::string> metrics;
@@ -239,6 +256,9 @@ main(int argc, char* const* argv)
             return test(static_cast<int>(rest.size()), &rest[0], logLevel,
                         metrics);
         }
+        case OPT_FUZZ:
+            fuzz(std::string(optarg), logLevel, metrics);
+            return 0;
         case OPT_CONF:
             cfgFile = std::string(optarg);
             break;
@@ -250,7 +270,7 @@ main(int argc, char* const* argv)
             std::cout << STELLAR_CORE_VERSION;
             return 0;
         case OPT_FORCESCP:
-            forceSCP = true;
+            forceSCP = make_optional<bool>(optarg == nullptr || string(optarg) == "true");
             break;
         case OPT_METRIC:
             metrics.push_back(std::string(optarg));
@@ -271,6 +291,9 @@ main(int argc, char* const* argv)
             std::cout << "Public: " << key.getBase58Public() << std::endl;
             return 0;
         }
+        case OPT_GENFUZZ:
+            genfuzz(std::string(optarg));
+            return 0;
 
         default:
             usage(0);
@@ -307,7 +330,6 @@ main(int argc, char* const* argv)
         Logging::setLogLevel(logLevel, nullptr);
 
         cfg.REBUILD_DB = newDB;
-        cfg.FORCE_SCP = forceSCP;
         cfg.REPORT_METRICS = metrics;
 
         if (forceSCP || newDB)
@@ -315,7 +337,7 @@ main(int argc, char* const* argv)
             if (newDB)
                 initializeDatabase(cfg);
             if (forceSCP)
-                setForceSCPFlag(cfg);
+                setForceSCPFlag(cfg, *forceSCP);
             return 0;
         }
         else if (!newHistories.empty())

@@ -53,6 +53,7 @@ FMT_SRCS =                                      \
     src/main/Config.cpp                         \
     src/main/PersistentState.cpp                \
     src/main/main.cpp                           \
+    src/main/fuzz.cpp                           \
     src/main/test.cpp                           \
     src/overlay/Floodgate.cpp                   \
     src/overlay/ItemFetcher.cpp                 \
@@ -89,6 +90,7 @@ FMT_SRCS =                                      \
     src/transactions/TxEnvelopeTests.cpp        \
     src/transactions/TxTests.cpp                \
     src/util/Fs.cpp                             \
+    src/util/GlobalChecks.cpp                   \
     src/util/Logging.cpp                        \
     src/util/Math.cpp                           \
     src/util/Timer.cpp                          \
@@ -136,6 +138,7 @@ FMT_HDRS =                                      \
     src/main/CommandHandler.h                   \
     src/main/Config.h                           \
     src/main/PersistentState.h                  \
+    src/main/fuzz.h                             \
     src/main/test.h                             \
     src/overlay/FetchableItem.h                 \
     src/overlay/Floodgate.h                     \
@@ -163,6 +166,7 @@ FMT_HDRS =                                      \
     src/transactions/TransactionFrame.h         \
     src/transactions/TxTests.h                  \
     src/util/Fs.h                               \
+    src/util/GlobalChecks.h                     \
     src/util/Logging.h                          \
     src/util/Math.h                             \
     src/util/NonCopyable.h                      \

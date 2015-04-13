@@ -50,16 +50,18 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>src;../../src/lib/libmedida/src;../../src/lib/soci/src/core;../../src/lib/autocheck/include;../../src/lib/cereal/include;../../src/lib/asio/include;../../src/lib/xdrpp;../../src/lib/libsodium/src/libsodium/include;../../src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;ASIO_STANDALONE;USE_POSTGRES;_WINSOCK_DEPRECATED_NO_WARNINGS;SODIUM_STATIC;ASIO_SEPARATE_COMPILATION;ASIO_ERROR_CATEGORY_NOEXCEPT=noexcept;_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0501;WIN32;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
-      <DisableSpecificWarnings>4800;4805</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4582;4583;4408;4512;4127;4324;4100;4510</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BrowseInformation>false</BrowseInformation>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -99,7 +101,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -108,6 +110,8 @@
       <PreprocessorDefinitions>NOMINMAX;ASIO_STANDALONE;USE_POSTGRES;_WINSOCK_DEPRECATED_NO_WARNINGS;SODIUM_STATIC;ASIO_SEPARATE_COMPILATION;ASIO_ERROR_CATEGORY_NOEXCEPT=noexcept;_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0501;WIN32;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BrowseInformation>false</BrowseInformation>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DisableSpecificWarnings>4582;4583;4408;4512;4127;4324;4100;4510</DisableSpecificWarnings>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -179,10 +183,7 @@
     <ClCompile Include="..\..\src\lib\http\request_parser.cpp" />
     <ClCompile Include="..\..\src\lib\http\server.cpp" />
     <ClCompile Include="..\..\src\lib\json\jsoncpp.cpp" />
-    <ClCompile Include="..\..\src\lib\util\format.cc">
-      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4456</DisableSpecificWarnings>
-      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4456</DisableSpecificWarnings>
-    </ClCompile>
+    <ClCompile Include="..\..\src\lib\util\format.cc" />
     <ClCompile Include="..\..\src\lib\util\getopt_long.c" />
     <ClCompile Include="..\..\src\lib\util\uint128_t.cpp" />
     <ClCompile Include="..\..\src\lib\xdrpp\tests\arpc.cc">
@@ -223,6 +224,7 @@
     </ClCompile>
     <ClCompile Include="..\..\src\main\Application.cpp" />
     <ClCompile Include="..\..\src\main\ApplicationImpl.cpp" />
+    <ClCompile Include="..\..\src\main\fuzz.cpp" />
     <ClCompile Include="..\..\src\main\PersistentState.cpp" />
     <ClCompile Include="..\..\src\overlay\OverlayManagerTests.cpp" />
     <ClCompile Include="..\..\src\overlay\PeerRecord.cpp" />
@@ -252,6 +254,7 @@
     <ClCompile Include="..\..\src\transactions\TxEnvelopeTests.cpp" />
     <ClCompile Include="..\..\src\transactions\TxTests.cpp" />
     <ClCompile Include="..\..\src\util\Fs.cpp" />
+    <ClCompile Include="..\..\src\util\GlobalChecks.cpp" />
     <ClCompile Include="..\..\src\util\Math.cpp" />
     <ClCompile Include="..\..\src\util\TmpDir.cpp" />
     <ClCompile Include="..\..\src\util\Timer.cpp" />
@@ -326,6 +329,7 @@
     <ClInclude Include="..\..\src\main\ApplicationImpl.h" />
     <ClInclude Include="..\..\src\main\CommandHandler.h" />
     <ClInclude Include="..\..\src\main\Config.h" />
+    <ClInclude Include="..\..\src\main\fuzz.h" />
     <ClInclude Include="..\..\src\main\PersistentState.h" />
     <ClInclude Include="..\..\src\main\test.h" />
     <ClInclude Include="..\..\src\overlay\FetchableItem.h" />
@@ -359,13 +363,17 @@
     <ClInclude Include="..\..\src\transactions\TxTests.h" />
     <ClInclude Include="..\..\src\util\asio.h" />
     <ClInclude Include="..\..\src\util\Fs.h" />
+    <ClInclude Include="..\..\src\util\GlobalChecks.h" />
     <ClInclude Include="..\..\src\util\Logging.h" />
     <ClInclude Include="..\..\src\util\make_unique.h" />
     <ClInclude Include="..\..\src\util\Math.h" />
     <ClInclude Include="..\..\src\util\must_use.h" />
+    <ClInclude Include="..\..\src\util\NonCopyable.h" />
+    <ClInclude Include="..\..\src\util\optional.h" />
     <ClInclude Include="..\..\src\util\TmpDir.h" />
     <ClInclude Include="..\..\src\util\Timer.h" />
     <ClInclude Include="..\..\src\util\types.h" />
+    <ClInclude Include="..\..\src\util\XDRStream.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\AUTHORS" />
