@@ -24,7 +24,7 @@ using xdr::operator<;
 using namespace std::placeholders;
 
 NominationProtocol::NominationProtocol(Slot& slot)
-    : mSlot(slot), mRoundNumber(0), mNominationStarted(false)
+    : mSlot(slot), mRoundNumber(1), mNominationStarted(false)
 {
     updateRoundLeaders();
 }
@@ -253,7 +253,8 @@ NominationProtocol::processEnvelope(SCPEnvelope const& envelope)
             recordStatement(st);
             res = SCP::EnvelopeState::VALID;
 
-            bool modified = false; // tracks if we should emit a new nomination message
+            bool modified =
+                false; // tracks if we should emit a new nomination message
             bool newCandidates = false;
 
             // attempts to promote some of the votes to accepted
@@ -276,7 +277,8 @@ NominationProtocol::processEnvelope(SCPEnvelope const& envelope)
                                   _2),
                         mLatestNominations))
                 {
-                    mAccepted.insert(v);
+                    mAccepted.emplace(v);
+                    mVotes.emplace(v);
                     modified = true;
                 }
             }
@@ -292,7 +294,7 @@ NominationProtocol::processEnvelope(SCPEnvelope const& envelope)
                                   _2),
                         mLatestNominations))
                 {
-                    mCandidates.insert(a);
+                    mCandidates.emplace(a);
                     newCandidates = true;
                 }
             }
@@ -322,9 +324,10 @@ NominationProtocol::processEnvelope(SCPEnvelope const& envelope)
 
                 if (newCandidates)
                 {
-                    Value v = mSlot.getSCP().combineCandidates(
-                        mSlot.getSlotIndex(), mCandidates);
-                    mSlot.bumpState(v);
+                    mLatestCompositeCandidate =
+                        mSlot.getSCP().combineCandidates(mSlot.getSlotIndex(),
+                                                         mCandidates);
+                    mSlot.bumpState(mLatestCompositeCandidate, false);
                 }
             }
         }
@@ -347,6 +350,9 @@ NominationProtocol::getStatementValues(SCPStatement const& st)
 bool
 NominationProtocol::nominate(Value const& value, bool timedout)
 {
+    CLOG(DEBUG, "SCP") << "NominationProtocol::nominate "
+                       << mSlot.getValueString(value);
+
     bool updated = false;
 
     mNominationStarted = true;
@@ -385,23 +391,26 @@ NominationProtocol::nominate(Value const& value, bool timedout)
         }
     }
 
-    if (timedout)
-    {
-        std::chrono::milliseconds timeout =
-            std::chrono::seconds(mRoundNumber * (mRoundNumber + 1) / 2);
+    std::chrono::milliseconds timeout =
+        std::chrono::seconds(mRoundNumber * (mRoundNumber + 1) / 2);
 
-        if (updated)
-        {
-            Value nominatingValue =
-                mSlot.getSCP().combineCandidates(mSlot.getSlotIndex(), mVotes);
-            mSlot.getSCP().nominatingValue(mSlot.getSlotIndex(),
-                                           nominatingValue, timeout);
-        }
+    Value nominatingValue;
+    if (!mVotes.empty())
+    {
+        nominatingValue =
+            mSlot.getSCP().combineCandidates(mSlot.getSlotIndex(), mVotes);
     }
+    // called even with an empty value to start the timer
+    mSlot.getSCP().nominatingValue(mSlot.getSlotIndex(), nominatingValue,
+                                   timeout);
 
     if (updated)
     {
         emitNomination();
+    }
+    else
+    {
+        CLOG(DEBUG, "SCP") << "NominationProtocol::nominate (SKIPPED)";
     }
 
     return updated;
