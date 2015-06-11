@@ -81,9 +81,9 @@ class LedgerPerformanceTests : public Simulation
         txs.push_back(ensureAccountIsLoadedCreated(iFrom));
         txs.push_back(ensureAccountIsLoadedCreated(iTo));
 
-        uint64_t amount = static_cast<uint64_t>(
+        int64_t amount = static_cast<int64_t>(
             rand_fraction() *
-            min(static_cast<uint64_t>(1000),
+            min(static_cast<int64_t>(1000),
                 (mAccounts[iFrom]->mBalance - mMinBalance) / 3));
         txs.push_back(make_optional<TxInfo>(
             createTransferTransaction(iFrom, iTo, amount)));

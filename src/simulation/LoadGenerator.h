@@ -17,7 +17,7 @@ class VirtualTimer;
 
 class LoadGenerator
 {
-public:
+  public:
     LoadGenerator();
     ~LoadGenerator();
 
@@ -29,21 +29,17 @@ public:
 
     std::vector<AccountInfoPtr> mAccounts;
     std::unique_ptr<VirtualTimer> mLoadTimer;
-    uint64 mMinBalance;
+    int64 mMinBalance;
 
     // Schedule a callback to generateLoad() STEP_MSECS miliseconds from now.
-    void scheduleLoadGeneration(Application& app,
-                                uint32_t nAccounts,
-                                uint32_t nTxs,
-                                uint32_t txRate);
+    void scheduleLoadGeneration(Application& app, uint32_t nAccounts,
+                                uint32_t nTxs, uint32_t txRate);
 
     // Generate one "step" worth of load (assuming 1 step per STEP_MSECS) at a
     // given target number of accounts and txs, and a given target tx/s rate.
     // If work remains after the current step, call scheduleLoadGeneration()
     // with the remainder.
-    void generateLoad(Application& app,
-                      uint32_t nAccounts,
-                      uint32_t nTxs,
+    void generateLoad(Application& app, uint32_t nAccounts, uint32_t nTxs,
                       uint32_t txRate);
 
     std::vector<TxInfo> accountCreationTransactions(size_t n);
@@ -51,18 +47,18 @@ public:
     std::vector<AccountInfoPtr> createAccounts(size_t n);
     bool loadAccount(Application& app, AccountInfo& account);
 
-    TxInfo createTransferTransaction(size_t iFrom, size_t iTo, uint64_t amount);
+    TxInfo createTransferTransaction(size_t iFrom, size_t iTo, int64_t amount);
     TxInfo createRandomTransaction(float alpha);
     std::vector<TxInfo> createRandomTransactions(size_t n, float paretoAlpha);
     void updateMinBalance(Application& app);
 
     struct AccountInfo : public std::enable_shared_from_this<AccountInfo>
     {
-        AccountInfo(size_t id, SecretKey key, uint64_t balance,
+        AccountInfo(size_t id, SecretKey key, int64_t balance,
                     SequenceNumber seq, LoadGenerator& loadGen);
         size_t mId;
         SecretKey mKey;
-        uint64_t mBalance;
+        int64_t mBalance;
         SequenceNumber mSeq;
 
         TxInfo creationTransaction();
@@ -76,12 +72,11 @@ public:
         AccountInfoPtr mFrom;
         AccountInfoPtr mTo;
         bool mCreate;
-        uint64_t mAmount;
+        int64_t mAmount;
 
         bool execute(Application& app);
         TransactionFramePtr createPaymentTx();
-        void recordExecution(uint64_t baseFee);
+        void recordExecution(int64_t baseFee);
     };
 };
-
 }

@@ -23,8 +23,7 @@ using namespace std;
 
 const uint32_t LoadGenerator::STEP_MSECS = 100;
 
-LoadGenerator::LoadGenerator()
-    : mMinBalance(0)
+LoadGenerator::LoadGenerator() : mMinBalance(0)
 {
     auto root =
         make_shared<AccountInfo>(0, txtest::getRoot(), 1000000000, 0, *this);
@@ -37,10 +36,8 @@ LoadGenerator::~LoadGenerator()
 
 // Schedule a callback to generateLoad() STEP_MSECS miliseconds from now.
 void
-LoadGenerator::scheduleLoadGeneration(Application& app,
-                                      uint32_t nAccounts,
-                                      uint32_t nTxs,
-                                      uint32_t txRate)
+LoadGenerator::scheduleLoadGeneration(Application& app, uint32_t nAccounts,
+                                      uint32_t nTxs, uint32_t txRate)
 {
     if (!mLoadTimer)
     {
@@ -48,8 +45,7 @@ LoadGenerator::scheduleLoadGeneration(Application& app,
     }
     mLoadTimer->expires_from_now(std::chrono::milliseconds(STEP_MSECS));
     mLoadTimer->async_wait(
-        [this, &app, nAccounts, nTxs, txRate]
-        (asio::error_code const& error)
+        [this, &app, nAccounts, nTxs, txRate](asio::error_code const& error)
         {
             if (!error)
             {
@@ -63,9 +59,7 @@ LoadGenerator::scheduleLoadGeneration(Application& app,
 // If work remains after the current step, call scheduleLoadGeneration()
 // with the remainder.
 void
-LoadGenerator::generateLoad(Application& app,
-                            uint32_t nAccounts,
-                            uint32_t nTxs,
+LoadGenerator::generateLoad(Application& app, uint32_t nAccounts, uint32_t nTxs,
                             uint32_t txRate)
 {
     updateMinBalance(app);
@@ -86,10 +80,9 @@ LoadGenerator::generateLoad(Application& app,
         bool logBoundary = ((nTxs / txRate) != ((nTxs - txPerStep) / txRate));
         if (logBoundary)
         {
-            CLOG(INFO, "LoadGen") << "Target rate: "
-                                  << txRate << "txs/s, pending: "
-                                  << nAccounts << " accounts, "
-                                  << nTxs << " payments";
+            CLOG(INFO, "LoadGen") << "Target rate: " << txRate
+                                  << "txs/s, pending: " << nAccounts
+                                  << " accounts, " << nTxs << " payments";
         }
 
         auto& clock = app.getClock();
@@ -149,24 +142,31 @@ LoadGenerator::generateLoad(Application& app,
         {
             using namespace std::chrono;
             auto executed = clock.now();
-            auto step1ms = duration_cast<milliseconds>(created-start).count();
-            auto step2ms = duration_cast<milliseconds>(executed-created).count();
-            auto totalms = duration_cast<milliseconds>(executed-start).count();
-            CLOG(INFO, "LoadGen") << "Step timing: "
-                                  << txs.size() << "txs, "
-                                  << creations << " creations, "
-                                  << payments << " payments, "
-                                  << rejected << " rejected, "
-                                  << totalms << "ms total = "
-                                  << step1ms << "ms build, "
-                                  << step2ms << "ms recv, "
+            auto step1ms = duration_cast<milliseconds>(created - start).count();
+            auto step2ms =
+                duration_cast<milliseconds>(executed - created).count();
+            auto totalms =
+                duration_cast<milliseconds>(executed - start).count();
+            CLOG(INFO, "LoadGen") << "Step timing: " << txs.size() << "txs, "
+                                  << creations << " creations, " << payments
+                                  << " payments, " << rejected << " rejected, "
+                                  << totalms << "ms total = " << step1ms
+                                  << "ms build, " << step2ms << "ms recv, "
                                   << (STEP_MSECS - totalms) << "ms spare";
         }
 
-        app.getMetrics().NewMeter({"loadgen", "account", "created"}, "account").Mark(creations);
-        app.getMetrics().NewMeter({"loadgen", "payment", "sent"}, "payment").Mark(payments);
-        app.getMetrics().NewMeter({"loadgen", "txn", "attempted"}, "txn").Mark(txs.size());
-        app.getMetrics().NewMeter({"loadgen", "txn", "rejected"}, "txn").Mark(rejected);
+        app.getMetrics()
+            .NewMeter({"loadgen", "account", "created"}, "account")
+            .Mark(creations);
+        app.getMetrics()
+            .NewMeter({"loadgen", "payment", "sent"}, "payment")
+            .Mark(payments);
+        app.getMetrics()
+            .NewMeter({"loadgen", "txn", "attempted"}, "txn")
+            .Mark(txs.size());
+        app.getMetrics()
+            .NewMeter({"loadgen", "txn", "rejected"}, "txn")
+            .Mark(rejected);
         scheduleLoadGeneration(app, nAccounts, nTxs, txRate);
     }
 }
@@ -230,7 +230,8 @@ LoadGenerator::loadAccount(Application& app, AccountInfo& account)
 }
 
 LoadGenerator::TxInfo
-LoadGenerator::createTransferTransaction(size_t iFrom, size_t iTo, uint64_t amount)
+LoadGenerator::createTransferTransaction(size_t iFrom, size_t iTo,
+                                         int64_t amount)
 {
     return TxInfo{mAccounts[iFrom], mAccounts[iTo], false, amount};
 }
@@ -247,10 +248,9 @@ LoadGenerator::createRandomTransaction(float alpha)
         iTo = static_cast<int>(rand_fraction() * mAccounts.size());
     } while (iFrom == iTo);
 
-    uint64_t amount = static_cast<uint64_t>(
-        rand_fraction() *
-        min(static_cast<uint64_t>(1000),
-            (mAccounts[iFrom]->mBalance - mMinBalance) / 3));
+    int64_t amount = static_cast<int64_t>(
+        rand_fraction() * min(static_cast<int64_t>(1000),
+                              (mAccounts[iFrom]->mBalance - mMinBalance) / 3));
     return createTransferTransaction(iFrom, iTo, amount);
 }
 
@@ -265,19 +265,14 @@ LoadGenerator::createRandomTransactions(size_t n, float paretoAlpha)
     return result;
 }
 
-
 //////////////////////////////////////////////////////
 // AccountInfo
 //////////////////////////////////////////////////////
 
-LoadGenerator::AccountInfo::AccountInfo(size_t id, SecretKey key, uint64_t balance,
-                                            SequenceNumber seq,
-                                            LoadGenerator& loadGen)
-    : mId(id)
-    , mKey(key)
-    , mBalance(balance)
-    , mSeq(seq)
-    , mLoadGen(loadGen)
+LoadGenerator::AccountInfo::AccountInfo(size_t id, SecretKey key,
+                                        int64_t balance, SequenceNumber seq,
+                                        LoadGenerator& loadGen)
+    : mId(id), mKey(key), mBalance(balance), mSeq(seq), mLoadGen(loadGen)
 {
 }
 
@@ -286,9 +281,8 @@ LoadGenerator::AccountInfo::creationTransaction()
 {
     return TxInfo{mLoadGen.mAccounts[0], shared_from_this(), true,
                   100 * mLoadGen.mMinBalance +
-                      mLoadGen.mAccounts.size() - 1};
+                      static_cast<int64_t>(mLoadGen.mAccounts.size() - 1)};
 }
-
 
 //////////////////////////////////////////////////////
 // TxInfo
@@ -324,13 +318,11 @@ LoadGenerator::TxInfo::createPaymentTx()
 }
 
 void
-LoadGenerator::TxInfo::recordExecution(uint64_t baseFee)
+LoadGenerator::TxInfo::recordExecution(int64_t baseFee)
 {
     mFrom->mSeq++;
     mFrom->mBalance -= mAmount;
     mFrom->mBalance -= baseFee;
     mTo->mBalance += mAmount;
 }
-
-
 }
