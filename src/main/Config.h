@@ -85,7 +85,8 @@ class Config : public std::enable_shared_from_this<Config>
     // we are confortable doing this on prod as well.)
     bool BREAK_ASIO_LOOP_FOR_FAST_TESTS;
 
-    uint32_t PROTOCOL_VERSION;
+    uint32_t LEDGER_PROTOCOL_VERSION;
+    uint32_t OVERLAY_PROTOCOL_VERSION;
     std::string VERSION_STR;
     std::string LOG_FILE_PATH;
     std::string TMP_DIR_PATH;

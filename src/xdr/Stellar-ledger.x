@@ -12,7 +12,8 @@ namespace stellar
 */
 struct LedgerHeader
 {
-    Hash previousLedgerHash; // hash of the previous ledger header
+    uint32 ledgerVersion;
+	Hash previousLedgerHash; // hash of the previous ledger header
     Hash txSetHash;          // the tx set that was SCP confirmed
     Hash txSetResultHash;    // the TransactionResultSet that led to this ledger
     Hash bucketListHash;     // hash of the ledger state

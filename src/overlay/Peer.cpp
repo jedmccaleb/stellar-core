@@ -46,7 +46,8 @@ Peer::sendHello()
 
     StellarMessage msg;
     msg.type(HELLO);
-    msg.hello().protocolVersion = mApp.getConfig().PROTOCOL_VERSION;
+    msg.hello().ledgerVersion = mApp.getConfig().LEDGER_PROTOCOL_VERSION;
+    msg.hello().overlayVersion = mApp.getConfig().OVERLAY_PROTOCOL_VERSION;
     msg.hello().versionStr = mApp.getConfig().VERSION_STR;
     msg.hello().listeningPort = mApp.getConfig().PEER_PORT;
     msg.hello().peerID = mApp.getConfig().PEER_PUBLIC_KEY;
