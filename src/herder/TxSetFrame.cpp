@@ -140,14 +140,15 @@ TxSetFrame::sortForApply()
 
 struct SurgeSorter
 {
-    Application& mApp;
-    SurgeSorter(Application& app) : mApp(app)
+    map<AccountID, float>& mAccountFeeMap;
+    SurgeSorter(map<AccountID, float>& afm) :  mAccountFeeMap(afm)
     {
     }
+
     bool operator()(TransactionFramePtr const& tx1,
                     TransactionFramePtr const& tx2)
     {
-        return tx1->getFeeRatio(mApp) < tx2->getFeeRatio(mApp);
+        return mAccountFeeMap[tx1->getSourceID()] > mAccountFeeMap[tx2->getSourceID()];
     }
 };
 
@@ -159,15 +160,28 @@ TxSetFrame::surgePricingFilter(Application& app)
     { // surge pricing in effect!
         CLOG(DEBUG, "Herder") << "surge pricing in effect! "
                               << mTransactions.size();
+
+        // determine the fee ratio for each account
+        map<AccountID, float> accountFeeMap;
+        for(auto& tx : mTransactions)
+        {
+            float r=tx->getFeeRatio(app);
+            float now = accountFeeMap[tx->getSourceID()];
+            if( now == 0) accountFeeMap[tx->getSourceID()] = r;
+            else if(r < now) accountFeeMap[tx->getSourceID()] = r;
+        }
+
         // sort tx by amount of fee they have paid
         // remove the bottom that aren't paying enough
         std::vector<TransactionFramePtr> tempList = mTransactions;
-        std::sort(tempList.begin(), tempList.end(), SurgeSorter(app));
+        // sort by seq first so txs from a given account will be removed in the right order
+        std::sort(tempList.begin(), tempList.end(), SeqSorter);
+        std::sort(tempList.begin(), tempList.end(), SurgeSorter(accountFeeMap));
 
         for (auto iter = tempList.begin() + max; iter != tempList.end(); iter++)
         {
             removeTx(*iter);
-        }
+        }  
     }
 }
 
