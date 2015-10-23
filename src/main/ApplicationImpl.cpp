@@ -100,8 +100,6 @@ ApplicationImpl::ApplicationImpl(VirtualClock& clock, Config const& cfg)
                                     });
     }
 
-    if(cfg.DATABASE == "sqlite3://:memory:") newDB();
-
     LOG(DEBUG) << "Application constructed";
 }
 

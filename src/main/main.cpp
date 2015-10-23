@@ -217,7 +217,6 @@ initializeDatabase(Config& cfg)
 {
     VirtualClock clock;
     Application::pointer app = Application::create(clock, cfg);
-    app->newDB();
 
     LOG(INFO) << "*";
     LOG(INFO) << "* The next launch will catchup from the network afresh.";
@@ -247,7 +246,7 @@ startApp(string cfgFile, Config& cfg)
     Application::pointer app;
     try
     {
-        app = Application::create(clock, cfg);
+        app = Application::create(clock, cfg, false);
 
         if (!checkInitialized(app))
         {

@@ -69,8 +69,7 @@ Simulation::addNode(SecretKey nodeKey, SCPQuorumSet qSet, VirtualClock& clock,
     cfg->QUORUM_SET = qSet;
     cfg->RUN_STANDALONE = (mMode == OVER_LOOPBACK);
 
-    Application::pointer result = Application::create(clock, *cfg);
-    if(newDB) result->newDB();
+    Application::pointer result = Application::create(clock, *cfg, newDB);
 
     NodeID nodeID = nodeKey.getPublicKey();
     mConfigs[nodeID] = cfg;

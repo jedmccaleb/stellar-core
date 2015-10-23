@@ -72,7 +72,6 @@ TEST_CASE("DB cache interaction with transactions", "[ledger][dbcache]")
     VirtualClock clock;
     Application::pointer app =
         Application::create(clock, getTestConfig(0, mode));
-    app->newDB();
     app->start();
 
     auto& db = app->getDatabase();

@@ -28,7 +28,6 @@ TEST_CASE("ledgerheader", "[ledger]")
     {
         VirtualClock clock;
         Application::pointer app = Application::create(clock, cfg);
-        app->newDB();
         app->start();
 
         auto const& lcl = app->getLedgerManager().getLastClosedLedgerHeader();
@@ -48,7 +47,7 @@ TEST_CASE("ledgerheader", "[ledger]")
         Config cfg2(cfg);
         cfg2.FORCE_SCP = false;
         VirtualClock clock2;
-        Application::pointer app2 = Application::create(clock2, cfg2);
+        Application::pointer app2 = Application::create(clock2, cfg2,false);
         app2->start();
 
         REQUIRE(saved ==
@@ -59,7 +58,6 @@ TEST_CASE("ledgerheader", "[ledger]")
     {
         VirtualClock clock;
         Application::pointer app = Application::create(clock, cfg);
-        app->newDB();
         app->start();
 
         auto const& lcl = app->getLedgerManager().getLastClosedLedgerHeader();

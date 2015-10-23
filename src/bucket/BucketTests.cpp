@@ -758,7 +758,6 @@ TEST_CASE("bucket persistence over app restart", "[bucket][bucketpersist]")
     // the bucket and ledger closes at each.
     {
         Application::pointer app = Application::create(clock, cfg0);
-        app->newDB();
         app->start();
         BucketList& bl = app->getBucketManager().getBucketList();
 
@@ -792,7 +791,6 @@ TEST_CASE("bucket persistence over app restart", "[bucket][bucketpersist]")
     // stop it. It should have acquired the same state and ledger.
     {
         Application::pointer app = Application::create(clock, cfg1);
-        app->newDB();
         app->start();
         BucketList& bl = app->getBucketManager().getBucketList();
 
@@ -816,7 +814,7 @@ TEST_CASE("bucket persistence over app restart", "[bucket][bucketpersist]")
     // pick up the bucket list correctly.
     cfg1.FORCE_SCP = false;
     {
-        Application::pointer app = Application::create(clock, cfg1);
+        Application::pointer app = Application::create(clock, cfg1,false);
         app->start();
         BucketList& bl = app->getBucketManager().getBucketList();
 
@@ -930,7 +928,6 @@ TEST_CASE("bucket apply bench", "[bucketbench][hide]")
     VirtualClock clock;
     Config cfg(getTestConfig(0, Config::TESTDB_POSTGRESQL));
     Application::pointer app = Application::create(clock, cfg);
-    app->newDB();
     app->start();
 
     std::vector<LedgerEntry> live(100000);
