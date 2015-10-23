@@ -164,7 +164,7 @@ TEST_CASE("ledger performance test", "[performance][hide]")
     qSet0.threshold = 1;
     qSet0.validators.push_back(v10NodeID);
 
-    cfg.REBUILD_DB = false;
+   
     cfg.DATABASE = "postgresql://host=localhost dbname=performance_test "
                    "user=test password=test";
     cfg.BUCKET_DIR_PATH = "performance-test.db.buckets";

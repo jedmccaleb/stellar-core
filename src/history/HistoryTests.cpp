@@ -405,6 +405,7 @@ HistoryTests::catchupNewApplication(uint32_t initLedger,
         getTestConfig(static_cast<int>(mCfgs.size()) + 1, dbMode));
     Application::pointer app2 = Application::create(
         clock, mConfigurator->configure(mCfgs.back(), false));
+    if(dbMode != Config::TestDbMode::TESTDB_IN_MEMORY_SQLITE) app2->newDB();
     app2->start();
     CHECK(catchupApplication(initLedger, resumeMode, app2) == true);
     return app2;
@@ -817,6 +818,7 @@ TEST_CASE_METHOD(HistoryTests, "Repair missing buckets via history",
         Application::create(clock, mConfigurator->configure(cfg2, false));
     app2->getPersistentState().setState(PersistentState::kHistoryArchiveState,
                                         state);
+   
     app2->start();
 
     auto hash1 = appPtr->getBucketManager().getBucketList().getHash();
@@ -881,6 +883,7 @@ TEST_CASE("persist publish queue", "[history]")
     {
         VirtualClock clock;
         Application::pointer app0 = Application::create(clock, cfg);
+        app0->newDB();
         app0->start();
         auto& hm0 = app0->getHistoryManager();
         while (hm0.getPublishQueueCount() < 5)
@@ -904,11 +907,11 @@ TEST_CASE("persist publish queue", "[history]")
     }
 
     cfg.MAX_CONCURRENT_SUBPROCESSES = 32;
-    cfg.REBUILD_DB = false;
 
     {
         VirtualClock clock;
         Application::pointer app1 = Application::create(clock, cfg);
+        app1->newDB();
         HistoryManager::initializeHistoryArchive(*app1, "test");
         for (size_t i = 0; i < 100; ++i)
             clock.crank(false);

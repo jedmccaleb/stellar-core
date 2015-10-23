@@ -194,7 +194,7 @@ TEST_CASE("postgres smoketest", "[db]")
     try
     {
         Application::pointer app = Application::create(clock, cfg);
-
+        app->newDB();
         int a = 10, b = 0;
 
         auto& session = app->getDatabase().getSession();
@@ -258,6 +258,7 @@ TEST_CASE("postgres performance", "[db][pgperf][hide]")
     try
     {
         Application::pointer app = Application::create(clock, cfg);
+        app->newDB();
         auto& session = app->getDatabase().getSession();
 
         session << "drop table if exists txtest;";

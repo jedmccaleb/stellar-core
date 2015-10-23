@@ -647,6 +647,7 @@ TEST_CASE("single create account SQL", "[singlesql][paymentsql][hide]")
     VirtualClock clock;
     Application::pointer app =
         Application::create(clock, getTestConfig(0, mode));
+    app->newDB();
     app->start();
 
     SecretKey root = getRoot(app->getNetworkID());

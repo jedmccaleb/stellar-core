@@ -217,12 +217,11 @@ initializeDatabase(Config& cfg)
 {
     VirtualClock clock;
     Application::pointer app = Application::create(clock, cfg);
+    app->newDB();
 
     LOG(INFO) << "*";
     LOG(INFO) << "* The next launch will catchup from the network afresh.";
     LOG(INFO) << "*";
-
-    cfg.REBUILD_DB = false;
 }
 
 int
@@ -233,8 +232,8 @@ initializeHistories(Config& cfg, vector<string> newHistories)
 
     for (auto const& arch : newHistories)
     {
-        if (!HistoryManager::initializeHistoryArchive(*app, arch))
-            return 1;
+        if(!HistoryManager::initializeHistoryArchive(*app, arch))
+                    return 1;           
     }
     return 0;
 }
@@ -406,7 +405,7 @@ main(int argc, char* const* argv)
             Logging::setLoggingToFile(cfg.LOG_FILE_PATH);
         Logging::setLogLevel(logLevel, nullptr);
 
-        cfg.REBUILD_DB = newDB;
+        
         cfg.REPORT_METRICS = metrics;
 
         if (forceSCP || newDB || getInfo || !loadXdrBucket.empty())

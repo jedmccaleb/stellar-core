@@ -42,7 +42,6 @@ TEST_CASE("standalone", "[herder]")
     Application::pointer app = Application::create(clock, cfg);
 
     Hash const& networkID = app->getNetworkID();
-
     app->start();
 
     // set up world
@@ -167,7 +166,6 @@ TEST_CASE("txset", "[herder]")
     Application::pointer app = Application::create(clock, cfg);
 
     Hash const& networkID = app->getNetworkID();
-
     app->start();
 
     // set up world
@@ -330,7 +328,6 @@ TEST_CASE("surge", "[herder]")
     Application::pointer app = Application::create(clock, cfg);
 
     Hash const& networkID = app->getNetworkID();
-
     app->start();
 
     auto& lm = app->getLedgerManager();
@@ -493,7 +490,6 @@ TEST_CASE("SCP Driver", "[herder]")
     Application::pointer app = Application::create(clock, cfg);
 
     Hash const& networkID = app->getNetworkID();
-
     app->start();
 
     app->getLedgerManager().getCurrentLedgerHeader().maxTxSetSize =
@@ -592,8 +588,8 @@ TEST_CASE("SCP State", "[herder]")
             qSet.validators.push_back(nodeIDs[0]);
             qSet.validators.push_back(nodeIDs[1]);
 
-            sim->addNode(nodeKeys[0], qSet, *clock, &nodeCfgs[0]);
-            sim->addNode(nodeKeys[1], qSet, *clock, &nodeCfgs[1]);
+            sim->addNode(nodeKeys[0], qSet, *clock, &nodeCfgs[0],true);
+            sim->addNode(nodeKeys[1], qSet, *clock, &nodeCfgs[1],true);
             sim->addPendingConnection(nodeIDs[0], nodeIDs[1]);
         }
 
@@ -622,7 +618,6 @@ TEST_CASE("SCP State", "[herder]")
         for (int i = 0; i < 2; i++)
         {
             nodeCfgs[i] = sim->getNode(nodeIDs[i])->getConfig();
-            nodeCfgs[i].REBUILD_DB = false;
             nodeCfgs[i].FORCE_SCP = forceSCP;
         }
 
@@ -640,7 +635,7 @@ TEST_CASE("SCP State", "[herder]")
         {
             qSetAll.validators.push_back(nodeIDs[i]);
         }
-        sim->addNode(nodeKeys[2], qSetAll, *clock, &nodeCfgs[2]);
+        sim->addNode(nodeKeys[2], qSetAll, *clock, &nodeCfgs[2],true);
         sim->getNode(nodeIDs[2])->start();
 
         // crank a bit (nothing should happen, node 2 is waiting for SCP

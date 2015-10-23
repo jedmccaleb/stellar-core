@@ -23,7 +23,6 @@ TEST_CASE("Ledger entry db lifecycle", "[ledger]")
     Config cfg(getTestConfig());
     VirtualClock clock;
     Application::pointer app = Application::create(clock, cfg);
-
     app->start();
     LedgerDelta delta(app->getLedgerManager().getCurrentLedgerHeader(),
                       app->getDatabase());
@@ -51,6 +50,7 @@ TEST_CASE("single ledger entry insert SQL", "[singlesql][entrysql]")
     VirtualClock clock;
     Application::pointer app =
         Application::create(clock, getTestConfig(0, mode));
+    app->newDB();
     app->start();
 
     LedgerDelta delta(app->getLedgerManager().getCurrentLedgerHeader(),
@@ -72,6 +72,7 @@ TEST_CASE("DB cache interaction with transactions", "[ledger][dbcache]")
     VirtualClock clock;
     Application::pointer app =
         Application::create(clock, getTestConfig(0, mode));
+    app->newDB();
     app->start();
 
     auto& db = app->getDatabase();

@@ -28,6 +28,7 @@ TEST_CASE("ledgerheader", "[ledger]")
     {
         VirtualClock clock;
         Application::pointer app = Application::create(clock, cfg);
+        app->newDB();
         app->start();
 
         auto const& lcl = app->getLedgerManager().getLastClosedLedgerHeader();
@@ -45,7 +46,6 @@ TEST_CASE("ledgerheader", "[ledger]")
     SECTION("load existing ledger")
     {
         Config cfg2(cfg);
-        cfg2.REBUILD_DB = false;
         cfg2.FORCE_SCP = false;
         VirtualClock clock2;
         Application::pointer app2 = Application::create(clock2, cfg2);
@@ -59,6 +59,7 @@ TEST_CASE("ledgerheader", "[ledger]")
     {
         VirtualClock clock;
         Application::pointer app = Application::create(clock, cfg);
+        app->newDB();
         app->start();
 
         auto const& lcl = app->getLedgerManager().getLastClosedLedgerHeader();

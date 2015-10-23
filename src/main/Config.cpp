@@ -19,7 +19,6 @@ Config::Config() : NODE_SEED(SecretKey::random())
 
     // non configurable
     FORCE_SCP = false;
-    REBUILD_DB = false;
     LEDGER_PROTOCOL_VERSION = 1;
 
     OVERLAY_PROTOCOL_MIN_VERSION = 4;
