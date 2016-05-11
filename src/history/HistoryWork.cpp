@@ -1713,6 +1713,12 @@ RepairMissingBucketsWork::onReset()
     bucketsToFetch.insert(bucketsToFetch.end(), publishBuckets.begin(),
                           publishBuckets.end());
 
+	for (auto const& name : bucketsToFetch)
+	{
+		CLOG(INFO, "History")
+			<< "bucket: " << name;
+	}
+
     for (auto const& hash : bucketsToFetch)
     {
         FileTransferInfo ft(*mDownloadDir, HISTORY_FILE_TYPE_BUCKET, hash);
