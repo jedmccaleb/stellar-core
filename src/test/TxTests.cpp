@@ -543,6 +543,24 @@ pathPayment(PublicKey const& to, Asset const& sendCur, int64_t sendMax,
 }
 
 Operation
+pathPayment2(PublicKey const& to, Asset const& sendCur, int64_t sendAmount,
+             Asset const& destCur, int64_t destMinAmount,
+            std::vector<Asset> const& path)
+{
+    Operation op;
+    op.body.type(PATH_PAYMENT2);
+    PathPayment2Op& ppop = op.body.pathPayment2Op();
+    ppop.sendAsset = sendCur;
+    ppop.sendAmount = sendAmount;
+    ppop.destAsset = destCur;
+    ppop.destMinAmount = destMinAmount;
+    ppop.destination = to;
+    std::copy(std::begin(path), std::end(path), std::back_inserter(ppop.path));
+
+    return op;
+}
+
+Operation
 createPassiveOffer(Asset const& selling, Asset const& buying,
                    Price const& price, int64_t amount)
 {

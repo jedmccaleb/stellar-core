@@ -395,6 +395,9 @@ throwIf(TransactionResult const& result)
     case MANAGE_BUY_OFFER:
         throwIf(opResult.tr().manageBuyOfferResult());
         break;
+    case PATH_PAYMENT2:
+        throwIf(opResult.tr().pathPayment2Result());
+        break;
     }
 }
 }

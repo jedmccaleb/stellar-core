@@ -299,7 +299,7 @@ TestAccount::pay(PublicKey const& destination, Asset const& asset,
 }
 
 PathPaymentResult
-TestAccount::pay(PublicKey const& destination, Asset const& sendCur,
+TestAccount::pathpay(PublicKey const& destination, Asset const& sendCur,
                  int64_t sendMax, Asset const& destCur, int64_t destAmount,
                  std::vector<Asset> const& path, Asset* noIssuer)
 {
@@ -324,4 +324,33 @@ TestAccount::pay(PublicKey const& destination, Asset const& sendCur,
 
     return getFirstResult(*transaction).tr().pathPaymentResult();
 }
+
+PathPaymentResult 
+TestAccount::pathpay2(PublicKey const& destination,
+                    Asset const& sendCur,int64_t sendAmount, 
+                    Asset const& destCur, int64_t destMin, 
+                    std::vector<Asset> const& path, Asset* noIssuer)
+{
+    auto transaction = tx({pathPayment2(destination, sendCur, sendAmount, destCur,
+                                       destMin, path)});
+    try
+    {
+        applyTx(transaction, mApp);
+    }
+    catch (ex_PATH_PAYMENT_NO_ISSUER&)
+    {
+        REQUIRE(noIssuer);
+        REQUIRE(*noIssuer == transaction->getResult()
+                                 .result.results()[0]
+                                 .tr()
+                                 .pathPayment2Result()
+                                 .noIssuer());
+        throw;
+    }
+
+    REQUIRE(!noIssuer);
+
+    return getFirstResult(*transaction).tr().pathPayment2Result();
+}
+
 };

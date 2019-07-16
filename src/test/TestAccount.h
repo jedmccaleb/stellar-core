@@ -70,10 +70,16 @@ class TestAccount
 
     void pay(PublicKey const& destination, int64_t amount);
     void pay(PublicKey const& destination, Asset const& asset, int64_t amount);
-    PathPaymentResult pay(PublicKey const& destination, Asset const& sendCur,
+    PathPaymentResult pathpay(PublicKey const& destination, Asset const& sendCur,
                           int64_t sendMax, Asset const& destCur,
                           int64_t destAmount, std::vector<Asset> const& path,
                           Asset* noIssuer = nullptr);
+
+    PathPaymentResult pathpay2(PublicKey const& destination,
+                              Asset const& sendCur, int64_t sendAmount,
+                              Asset const& destCur, int64_t destMin,
+                              std::vector<Asset> const& path,
+                              Asset* noIssuer = nullptr);
 
     operator SecretKey() const
     {

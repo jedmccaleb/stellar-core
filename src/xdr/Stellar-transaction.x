@@ -27,7 +27,8 @@ enum OperationType
     INFLATION = 9,
     MANAGE_DATA = 10,
     BUMP_SEQUENCE = 11,
-    MANAGE_BUY_OFFER = 12
+    MANAGE_BUY_OFFER = 12,
+	PATH_PAYMENT2 = 13
 };
 
 /* CreateAccount
@@ -83,6 +84,22 @@ struct PathPaymentOp
 
     Asset path<5>; // additional hops it must go through to get there
 };
+
+struct PathPayment2Op
+{
+    Asset sendAsset;		// asset we pay with
+    int64 sendAmount;		// amount that is sent
+
+    AccountID destination;	// recipient of the payment
+    Asset destAsset;		// what they end up with
+    int64 destMinAmount;    // the minimum amount of destAsset that
+							// is received (excluding fees).
+							// The operation will fail if can't be met
+
+    Asset path<5>; // additional hops it must go through to get there
+};
+
+
 
 /* Creates, updates or deletes an offer
 
@@ -288,6 +305,8 @@ struct Operation
         BumpSequenceOp bumpSequenceOp;
     case MANAGE_BUY_OFFER:
         ManageBuyOfferOp manageBuyOfferOp;
+	case PATH_PAYMENT2:
+        PathPayment2Op pathPayment2Op;
     }
     body;
 };
@@ -783,7 +802,9 @@ case opINNER:
     case BUMP_SEQUENCE:
         BumpSequenceResult bumpSeqResult;
     case MANAGE_BUY_OFFER:
-	ManageBuyOfferResult manageBuyOfferResult;
+		ManageBuyOfferResult manageBuyOfferResult;
+	case PATH_PAYMENT2:
+		PathPaymentResult pathPayment2Result;
     }
     tr;
 default:

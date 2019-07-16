@@ -942,6 +942,12 @@
     <ClCompile Include="..\..\src\herder\QuorumIntersectionCheckerImpl.cpp">
       <Filter>herder</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\transactions\PathPayment2OpFrame.cpp">
+      <Filter>transactions</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\transactions\test\PathPayment2Tests.cpp">
+      <Filter>transactions\tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\lib\util\easylogging++.h">
@@ -1627,6 +1633,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\herder\QuorumIntersectionCheckerImpl.h">
       <Filter>herder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\transactions\PathPayment2OpFrame.h">
+      <Filter>transactions</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
