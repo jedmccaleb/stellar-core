@@ -154,9 +154,8 @@ BucketLevel::prepare(Application& app, uint32_t currLedger,
         }
     }
 
-    mNextCurr =
-        FutureBucket(app, curr, snap, shadows, currLedgerProtocol,
-                     BucketList::keepDeadEntries(mLevel), countMergeEvents);
+    mNextCurr = FutureBucket(app, curr, snap, shadows, currLedgerProtocol,
+                             countMergeEvents, mLevel);
     assert(mNextCurr.isMerging());
 }
 
@@ -411,6 +410,18 @@ BucketList::getLevel(uint32_t i)
 }
 
 void
+BucketList::resolveAnyReadyFutures()
+{
+    for (auto& level : mLevels)
+    {
+        if (level.getNext().isMerging() && level.getNext().mergeComplete())
+        {
+            level.getNext().resolve();
+        }
+    }
+}
+
+void
 BucketList::addBatch(Application& app, uint32_t currLedger,
                      uint32_t currLedgerProtocol,
                      std::vector<LedgerEntry> const& initEntries,
@@ -523,6 +534,19 @@ BucketList::addBatch(Application& app, uint32_t currLedger,
                                      countMergeEvents),
                        shadows, countMergeEvents);
     mLevels[0].commit();
+
+    // We almost always want to try to resolve completed merges to single
+    // buckets, as it makes restarts less fragile: fewer saved/restored shadows,
+    // fewer buckets for the user to accidentally delete from their buckets
+    // dir. Also makes publication less likely to redo a merge that was already
+    // complete (but not resolved) when the snapshot gets taken.
+    //
+    // But we support the option of not-doing so, only for the sake of
+    // testing. Note: this is nonblocking in any case.
+    if (!app.getConfig().ARTIFICIALLY_PESSIMIZE_MERGES_FOR_TESTING)
+    {
+        resolveAnyReadyFutures();
+    }
 }
 
 void
@@ -534,7 +558,7 @@ BucketList::restartMerges(Application& app, uint32_t maxProtocolVersion)
         auto& next = level.getNext();
         if (next.hasHashes() && !next.isLive())
         {
-            next.makeLive(app, maxProtocolVersion, keepDeadEntries(i));
+            next.makeLive(app, maxProtocolVersion, i);
             if (next.isMerging())
             {
                 CLOG(INFO, "Bucket")

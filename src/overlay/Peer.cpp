@@ -45,6 +45,7 @@ Peer::Peer(Application& app, PeerRole role)
     : mApp(app)
     , mRole(role)
     , mState(role == WE_CALLED_REMOTE ? CONNECTING : CONNECTED)
+    , mRemoteOverlayMinVersion(0)
     , mRemoteOverlayVersion(0)
     , mIdleTimer(app)
     , mLastRead(app.getClock().now())
@@ -520,6 +521,7 @@ Peer::recvMessage(StellarMessage const& stellarMsg)
 
     assert(isAuthenticated() || stellarMsg.type() == HELLO ||
            stellarMsg.type() == AUTH || stellarMsg.type() == ERROR_MSG);
+    mApp.getOverlayManager().recordDuplicateMessageMetric(stellarMsg);
 
     switch (stellarMsg.type())
     {

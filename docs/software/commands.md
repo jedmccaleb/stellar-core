@@ -102,7 +102,7 @@ Command options can only by placed after command.
     on possible options for test.
   * For example this will run just the tests tagged with `[tx]` using protocol
     versions 9 and 10 and stop after the first failure:
-    `stellar-core --test -a --version 9 --version 10 "[tx]"`
+    `stellar-core test -a --version 9 --version 10 "[tx]"`
 * **upgrade-db**: Upgrades local database to current schema version. This is
   usually done automatically during stellar-core run or other command.
 * **version**: Print version info and then exit.
@@ -165,8 +165,9 @@ format.
   Clear metrics for a specified domain. If no domain specified, clear all
   metrics (for testing purposes).
 
-* **peers**
+* **peers?[&fullkeys=true]**
   Returns the list of known peers in JSON format.
+  If `fullkeys` is set, outputs unshortened public keys.
 
 * **quorum**
   `quorum?[node=NODE_ID][&compact=true][&fullkeys=true][&transitive=true]`<br>

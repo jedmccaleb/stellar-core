@@ -18,7 +18,7 @@ Of course feel free to make your own issues if you think something needs to adde
 
 # Basic quality checks
 
-Please ensure that all tests pass before submitting changes. The local testsuite can be run as `make check` or `src/stellar-core --test`,
+Please ensure that all tests pass before submitting changes. The local testsuite can be run as `make check` or `src/stellar-core test`,
 see [README](./README.md) for details on running tests.
 
 Code formatting wise, we have a `.clang-format` config file that you should use on modified files.

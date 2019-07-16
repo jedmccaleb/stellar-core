@@ -137,22 +137,6 @@ HerderImpl::valueExternalized(uint64 slotIndex, StellarValue const& value)
     // record metrics
     getHerderSCPDriver().recordSCPExecutionMetrics(slotIndex);
 
-    // dump SCP information if this ledger took a long time
-    auto now = mApp.getClock().now();
-    auto gap =
-        std::chrono::duration_cast<std::chrono::seconds>(now - mLastExternalize)
-            .count();
-    if (gap > DUMP_SCP_TIMEOUT_SECONDS)
-    {
-        auto slotInfo = getJsonQuorumInfo(getSCP().getLocalNodeID(), false,
-                                          false, slotIndex);
-        Json::FastWriter fw;
-        CLOG(WARNING, "Herder")
-            << fmt::format("Ledger took {} seconds, SCP information:{}", gap,
-                           fw.write(slotInfo));
-    }
-    mLastExternalize = now;
-
     // called both here and at the end (this one is in case of an exception)
     trackingHeartBeat();
 
@@ -195,12 +179,29 @@ HerderImpl::valueExternalized(uint64 slotIndex, StellarValue const& value)
         }
     }
 
+    // dump SCP information if this ledger took a long time
+    auto gap =
+        std::chrono::duration<double>(mApp.getClock().now() - mLastExternalize)
+            .count();
+    if (gap > DUMP_SCP_TIMEOUT_SECONDS)
+    {
+        auto slotInfo = getJsonQuorumInfo(getSCP().getLocalNodeID(), false,
+                                          false, slotIndex);
+        Json::FastWriter fw;
+        CLOG(WARNING, "Herder")
+            << fmt::format("Ledger took {} seconds, SCP information:{}", gap,
+                           fw.write(slotInfo));
+    }
+
     // tell the LedgerManager that this value got externalized
     // LedgerManager will perform the proper action based on its internal
     // state: apply, trigger catchup, etc
     LedgerCloseData ledgerData(mHerderSCPDriver.lastConsensusLedgerIndex(),
                                externalizedSet, value);
     mLedgerManager.valueExternalized(ledgerData);
+
+    // start timing next externalize from this point
+    mLastExternalize = mApp.getClock().now();
 
     // perform cleanups
     updateTransactionQueue(externalizedSet->mTransactions);
@@ -731,7 +732,7 @@ HerderImpl::triggerNextLedger(uint32_t ledgerSeqToTrigger)
     auto const& lcl = mLedgerManager.getLastClosedLedgerHeader();
     auto proposedSet = mTransactionQueue.toTxSet(lcl.hash);
     auto removed = proposedSet->trimInvalid(mApp);
-    mTransactionQueue.remove(removed);
+    mTransactionQueue.ban(removed);
 
     proposedSet->surgePricingFilter(mApp);
 
@@ -878,8 +879,8 @@ Json::Value
 HerderImpl::getJsonInfo(size_t limit, bool fullKeys)
 {
     Json::Value ret;
-    ret["you"] =
-        mApp.getConfig().toStrKey(mApp.getConfig().NODE_SEED.getPublicKey());
+    ret["you"] = mApp.getConfig().toStrKey(
+        mApp.getConfig().NODE_SEED.getPublicKey(), fullKeys);
 
     ret["scp"] = getSCP().getJsonInfo(limit, fullKeys);
     ret["queue"] = mPendingEnvelopes.getJsonInfo(limit);
@@ -896,7 +897,23 @@ HerderImpl::getJsonTransitiveQuorumIntersectionInfo(bool fullKeys) const
         static_cast<Json::UInt64>(mLastQuorumMapIntersectionState.mNumNodes);
     ret["last_check_ledger"] = static_cast<Json::UInt64>(
         mLastQuorumMapIntersectionState.mLastCheckLedger);
-    if (!mLastQuorumMapIntersectionState.enjoysQuorunIntersection())
+    if (mLastQuorumMapIntersectionState.enjoysQuorunIntersection())
+    {
+        Json::Value critical;
+        for (auto const& group :
+             mLastQuorumMapIntersectionState.mIntersectionCriticalNodes)
+        {
+            Json::Value jg;
+            for (auto const& k : group)
+            {
+                auto s = mApp.getConfig().toStrKey(k, fullKeys);
+                jg.append(s);
+            }
+            critical.append(jg);
+        }
+        ret["critical"] = critical;
+    }
+    else
     {
         ret["last_good_ledger"] = static_cast<Json::UInt64>(
             mLastQuorumMapIntersectionState.mLastGoodLedger);
@@ -904,14 +921,12 @@ HerderImpl::getJsonTransitiveQuorumIntersectionInfo(bool fullKeys) const
         auto const& pair = mLastQuorumMapIntersectionState.mPotentialSplit;
         for (auto const& k : pair.first)
         {
-            auto s = (fullKeys ? mApp.getConfig().toStrKey(k)
-                               : mApp.getConfig().toShortString(k));
+            auto s = mApp.getConfig().toStrKey(k, fullKeys);
             a.append(s);
         }
         for (auto const& k : pair.second)
         {
-            auto s = (fullKeys ? mApp.getConfig().toStrKey(k)
-                               : mApp.getConfig().toShortString(k));
+            auto s = mApp.getConfig().toStrKey(k, fullKeys);
             b.append(s);
         }
         split.append(a);
@@ -926,8 +941,7 @@ HerderImpl::getJsonQuorumInfo(NodeID const& id, bool summary, bool fullKeys,
                               uint64 index)
 {
     Json::Value ret;
-    ret["node"] = (fullKeys ? mApp.getConfig().toStrKey(id)
-                            : mApp.getConfig().toShortString(id));
+    ret["node"] = mApp.getConfig().toStrKey(id, fullKeys);
     ret["qset"] = getSCP().getJsonQuorumInfo(id, summary, fullKeys, index);
     bool isSelf = id == mApp.getConfig().NODE_SEED.getPublicKey();
     if (isSelf && mLastQuorumMapIntersectionState.hasAnyResults())
@@ -971,8 +985,7 @@ HerderImpl::getJsonTransitiveQuorumInfo(NodeID const& rootID, bool summary,
         {
             Json::Value cur;
             valGenID++;
-            cur["node"] = fullKeys ? mApp.getConfig().toStrKey(id)
-                                   : mApp.getConfig().toShortString(id);
+            cur["node"] = mApp.getConfig().toStrKey(id, fullKeys);
             if (!summary)
             {
                 cur["distance"] = distance;
@@ -1110,16 +1123,27 @@ HerderImpl::checkAndMaybeReanalyzeQuorumMap()
             auto qic = QuorumIntersectionChecker::create(qmap, cfg);
             auto& hState = mLastQuorumMapIntersectionState;
             auto& app = mApp;
-            auto worker = [curr, ledger, nNodes, qic, &app, &hState] {
+            auto worker = [curr, ledger, nNodes, qic, qmap, cfg, &app,
+                           &hState] {
                 bool ok = qic->networkEnjoysQuorumIntersection();
                 auto split = qic->getPotentialSplit();
+                std::set<std::set<PublicKey>> critical;
+                if (ok)
+                {
+                    // Only bother calculating the _critical_ groups if we're
+                    // intersecting; if not intersecting we should finish ASAP
+                    // and raise an alarm.
+                    critical = QuorumIntersectionChecker::
+                        getIntersectionCriticalGroups(qmap, cfg);
+                }
                 app.postOnMainThread(
-                    [ok, curr, ledger, nNodes, split, &hState] {
+                    [ok, curr, ledger, nNodes, split, critical, &hState] {
                         hState.mRecalculating = false;
                         hState.mNumNodes = nNodes;
                         hState.mLastCheckLedger = ledger;
                         hState.mLastCheckQuorumMapHash = curr;
                         hState.mPotentialSplit = split;
+                        hState.mIntersectionCriticalNodes = critical;
                         if (ok)
                         {
                             hState.mLastGoodLedger = ledger;
@@ -1311,7 +1335,7 @@ HerderImpl::updateTransactionQueue(
     std::vector<TransactionFramePtr> const& applied)
 {
     // remove all these tx from mTransactionQueue
-    mTransactionQueue.remove(applied);
+    mTransactionQueue.removeAndReset(applied);
     mTransactionQueue.shift();
 
     // rebroadcast entries, sorted in apply-order to maximize chances of

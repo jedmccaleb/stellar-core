@@ -99,7 +99,7 @@ LedgerManager::ledgerAbbrev(LedgerHeader const& header, uint256 const& hash)
 }
 
 std::string
-LedgerManager::ledgerAbbrev(LedgerHeaderHistoryEntry he)
+LedgerManager::ledgerAbbrev(LedgerHeaderHistoryEntry const& he)
 {
     return ledgerAbbrev(he.header, he.hash);
 }
@@ -121,6 +121,8 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
     , mPrefetchHitRate(
           app.getMetrics().NewCounter({"ledger", "prefetch", "hit-rate"}))
     , mLastClose(mApp.getClock().now())
+    , mCatchupDuration(
+          app.getMetrics().NewTimer({"ledger", "catchup", "duration"}))
     , mSyncingLedgersSize(
           app.getMetrics().NewCounter({"ledger", "memory", "queued-ledgers"}))
     , mState(LM_BOOTING_STATE)
@@ -148,6 +150,22 @@ LedgerManagerImpl::setState(State s)
         {
             mCatchupState = CatchupState::NONE;
             mApp.getCatchupManager().logAndUpdateCatchupStatus(true);
+        }
+
+        if (mState == LM_CATCHING_UP_STATE && !mStartCatchup)
+        {
+            mStartCatchup = std::make_unique<VirtualClock::time_point>(
+                mApp.getClock().now());
+        }
+        else if (mState == LM_SYNCED_STATE && mStartCatchup)
+        {
+            std::chrono::nanoseconds duration =
+                mApp.getClock().now() - *mStartCatchup;
+            mCatchupDuration.Update(duration);
+            CLOG(DEBUG, "Perf")
+                << "Caught up to the network in "
+                << std::chrono::duration<double>(duration).count()
+                << " seconds";
         }
     }
 }
@@ -195,7 +213,7 @@ LedgerManager::genesisLedger()
 }
 
 void
-LedgerManagerImpl::startNewLedger(LedgerHeader genesisLedger)
+LedgerManagerImpl::startNewLedger(LedgerHeader const& genesisLedger)
 {
     DBTimeExcluder qtExclude(mApp);
     auto ledgerTime = mLedgerClose.TimeScope();
@@ -232,7 +250,7 @@ LedgerManagerImpl::startNewLedger()
         ledger.maxTxSetSize = cfg.TESTING_UPGRADE_MAX_TX_SET_SIZE;
     }
 
-    startNewLedger(std::move(ledger));
+    startNewLedger(ledger);
 }
 
 void
@@ -767,6 +785,7 @@ during replays.
 void
 LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
 {
+    auto ledgerTime = mLedgerClose.TimeScope();
     DBTimeExcluder qtExclude(mApp);
 
     LedgerTxn ltx(mApp.getLedgerTxnRoot());
@@ -820,8 +839,6 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
 
         throw std::runtime_error("corrupt transaction set");
     }
-
-    auto ledgerTime = mLedgerClose.TimeScope();
 
     auto const& sv = ledgerData.getValue();
     header.current().scpValue = sv;
@@ -921,6 +938,10 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
 
     // step 4
     mApp.getBucketManager().forgetUnreferencedBuckets();
+
+    std::chrono::duration<double> ledgerTimeSeconds = ledgerTime.Stop();
+    CLOG(DEBUG, "Perf") << "Applied ledger in " << ledgerTimeSeconds.count()
+                        << " seconds";
 }
 
 void
@@ -1115,16 +1136,6 @@ LedgerManagerImpl::storeCurrentLedger(LedgerHeader const& header)
     // the bucketlist so we can survive a restart and re-attach to the buckets.
     HistoryArchiveState has(header.ledgerSeq,
                             mApp.getBucketManager().getBucketList());
-
-    // We almost always want to try to resolve completed merges to single
-    // buckets, as it makes restarts less fragile: fewer saved/restored shadows,
-    // fewer buckets for the user to accidentally delete from their buckets
-    // dir. But we support the option of not-doing so, only for the sake of
-    // testing. Note: this is nonblocking in any case.
-    if (!mApp.getConfig().ARTIFICIALLY_PESSIMIZE_MERGES_FOR_TESTING)
-    {
-        has.resolveAnyReadyFutures();
-    }
 
     mApp.getPersistentState().setState(PersistentState::kHistoryArchiveState,
                                        has.toString());

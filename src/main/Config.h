@@ -105,10 +105,9 @@ class Config : public std::enable_shared_from_this<Config>
     // application config
 
     // The default way stellar-core starts is to load the state from disk and
-    // catch
-    // up to the network before starting SCP.
-    // If you need different behavior you need to use --newdb or --force-scp
-    // which sets the following flags:
+    // catch up to the network before starting SCP. If you need different
+    // behavior you need to use new-db or force-scp which sets the following
+    // flags:
 
     // SCP will start running immediately using the current local state to
     // participate in consensus. DO NOT INCLUDE THIS IN A CONFIG FILE
@@ -309,8 +308,11 @@ class Config : public std::enable_shared_from_this<Config>
     void adjust();
 
     std::string toShortString(PublicKey const& pk) const;
-    std::string toStrKey(PublicKey const& pk, bool& isAlias) const;
-    std::string toStrKey(PublicKey const& pk) const;
+
+    // fullKey true => returns full StrKey corresponding to pk
+    //  otherwise, returns alias or shortString equivalent
+    std::string toStrKey(PublicKey const& pk, bool fullKey) const;
+
     bool resolveNodeID(std::string const& s, PublicKey& retKey) const;
 
     std::chrono::seconds getExpectedLedgerCloseTime() const;

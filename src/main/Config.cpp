@@ -1130,8 +1130,8 @@ Config::validateConfig(bool mixed)
     {
         // calculates default value for safety giving the top level entities
         // the same weight
-        auto topLevelCount =
-            QUORUM_SET.validators.size() + QUORUM_SET.innerSets.size();
+        auto topLevelCount = static_cast<uint32>(QUORUM_SET.validators.size() +
+                                                 QUORUM_SET.innerSets.size());
         FAILURE_SAFETY = topLevelCount - minSize;
 
         LOG(INFO) << "Assigning calculated value of " << FAILURE_SAFETY
@@ -1264,27 +1264,18 @@ Config::toShortString(PublicKey const& pk) const
 }
 
 std::string
-Config::toStrKey(PublicKey const& pk, bool& isAlias) const
+Config::toStrKey(PublicKey const& pk, bool fullKey) const
 {
-    std::string ret = KeyUtils::toStrKey(pk);
-    auto it = VALIDATOR_NAMES.find(ret);
-    if (it == VALIDATOR_NAMES.end())
+    std::string res;
+    if (fullKey)
     {
-        isAlias = false;
-        return ret;
+        res = KeyUtils::toStrKey(pk);
     }
     else
     {
-        isAlias = true;
-        return it->second;
+        res = toShortString(pk);
     }
-}
-
-std::string
-Config::toStrKey(PublicKey const& pk) const
-{
-    bool isAlias;
-    return toStrKey(pk, isAlias);
+    return res;
 }
 
 bool
